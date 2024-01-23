@@ -35,5 +35,3 @@ The Chip-8 keypad is emulated using your computer's keyboard. The default key ma
 ## Contribute
 Feel free to contribute to this project! Whether you want to add features, fix bugs, or improve documentation, your contributions are welcome.
 
-## License
-This project is licensed under the MIT License - see the LICENSE file for details
