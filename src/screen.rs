@@ -4,7 +4,7 @@ use sdl2::keyboard::Keycode;
 use std::time::Duration;
 use log::info;
 
-const PIXEL_SHUTDOWN_FACTOR: u8 = 70;
+const PIXEL_SHUTDOWN_FACTOR: u8 = 85;
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
 const BLOCK_SIZE: u32 = 12;
@@ -58,7 +58,7 @@ impl Screen  {
     // Draws pixel buffer to the screen
     pub fn update(&mut self, draw: bool) {
 
-        if draw {
+        if draw || self.shutdown_pixels.iter().any(|x| *x > 0) {
             // Decrease the shutdown pixels
             self.shutdown_pixels.iter_mut().for_each(|x| *x = 
                 x.saturating_sub(PIXEL_SHUTDOWN_FACTOR));

@@ -25,7 +25,7 @@ fn main() {
     } else {
         loop {
             let mut draw = false;
-            for _ in 0..20 {
+            for _ in 0..15 {
                 cpu.step(Some(&mut screen));
                 draw = draw || cpu.has_drawn();
             }

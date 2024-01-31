@@ -8,6 +8,9 @@ use std::time::{Duration, Instant};
 // Memory address where CHIP-8 programs usually start
 const START_PGM: u16 = 0x200;
 
+// Memory address where the fontset starts
+const START_FONT: u16 = 0x50;
+
 // Size of the CHIP-8 RAM in bytes
 const RAM_SIZE: usize = 4096;
 
@@ -79,8 +82,10 @@ impl Cpu {
             0xF0, 0x80, 0xF0, 0x80, 0x80, // F];
         ];
 
-        for i in 0..80 {
-            self.ram[i] = fontset[i];
+        startcpy = START_FONT as usize;
+        for byte in fontset.iter() {
+            self.ram[startcpy] = *byte;
+            startcpy+=1;
         }
 
         info!("Loaded {} bytes from the disk", rom.len());
@@ -447,8 +452,7 @@ impl Cpu {
                     0x29 => {
                         let x = (opcode & 0x0F00) >> 8;
                         trace!("Setting index = sprite address of V{}", x);
-                        info!("V{} = {}", x, self.v_reg[x as usize]);
-                        self.index = (self.v_reg[x as usize]*5) as u16;
+                        self.index = START_FONT+(self.v_reg[x as usize]*5) as u16;
                     },
                     0x33 => {
                         let x = (opcode & 0x0F00) >> 8;
