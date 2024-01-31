@@ -25,6 +25,10 @@ pub struct Cpu {
     ram: [u8; RAM_SIZE],
     
     time: Instant,
+
+    last_key: Option<u8>,
+
+    has_drawn: bool,
 }
 
 
@@ -41,6 +45,8 @@ impl Cpu {
             sound_timer: 0,
             ram: [0; 4096],
             time: Instant::now(),
+            last_key: None,
+            has_drawn: false,
         }
     }
 
@@ -51,6 +57,30 @@ impl Cpu {
         for byte in rom {
             self.ram[startcpy] = *byte;
             startcpy+=1;
+        }
+
+        // Load the fontset into the memory
+        let fontset: [u8; 80] = [
+            0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+            0x20, 0x60, 0x20, 0x20, 0x70, // 1
+            0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+            0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+            0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+            0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+            0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+            0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+            0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+            0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+            0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+            0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+            0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+            0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+            0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+            0xF0, 0x80, 0xF0, 0x80, 0x80, // F];
+        ];
+
+        for i in 0..80 {
+            self.ram[i] = fontset[i];
         }
 
         info!("Loaded {} bytes from the disk", rom.len());
@@ -68,13 +98,7 @@ impl Cpu {
         Ok(())
     }
 
-    // Executes one step of the CHIP-8 CPU
-    pub fn step(&mut self, screen: Option<&mut Screen>) {
-
-        // TODO FX29, FX33, 
-
-        let opcode = self.fetch();
-
+    pub fn update_timers(&mut self) {
         // Update timers
         let now = Instant::now();
 
@@ -91,7 +115,17 @@ impl Cpu {
 
             self.time = now;
         }
+    }
 
+    pub fn has_drawn(&self) -> bool {
+        self.has_drawn
+    }
+
+    // Executes one step of the CHIP-8 CPU
+    pub fn step(&mut self, screen: Option<&mut Screen>) {
+
+        self.has_drawn = false;
+        let opcode = self.fetch();
 
         trace!("Executing 0x{:x}", opcode);
 
@@ -100,6 +134,7 @@ impl Cpu {
                 match opcode & 0x00FF {
                     // Clear the screen
                     0xE0 => {
+                        self.has_drawn = true;
                         let screen = screen.unwrap();
                         trace!("Clearing the screen");
                         screen.clear();
@@ -197,6 +232,7 @@ impl Cpu {
                         trace!("Setting V{} |= V{}", x, y);
 
                         self.v_reg[x as usize] |= self.v_reg[y as usize];
+                        self.v_reg[0xf] = 0;
                     },
                     // Setting VX &= VY
                     0x2 => {
@@ -206,6 +242,7 @@ impl Cpu {
                         trace!("Setting V{} &= V{}", x, y);
 
                         self.v_reg[x as usize] &= self.v_reg[y as usize];
+                        self.v_reg[0xf] = 0;
                     },
                     // Setting VX ^= VY
                     0x3 => {
@@ -213,6 +250,7 @@ impl Cpu {
                         let y = (opcode & 0x00F0) >> 4;
 
                         self.v_reg[x as usize] ^= self.v_reg[y as usize];
+                        self.v_reg[0xf] = 0;
                     },
                     // Add VY to VX (affects the carry flag)
                     0x4 => {
@@ -221,59 +259,67 @@ impl Cpu {
 
                         trace!("Adding V{} to V{} (carry)", y, x);
 
+                        let mut flag: u8 = 0;
+
                         if self.v_reg[x as usize] as u16 + self.v_reg[y as usize] as u16 > 255 {
-                            self.v_reg[0xF] = 1;
-                        } else {
-                            self.v_reg[0xF] = 0;
-                        }
+                            flag = 1;
+                        } 
 
                         self.v_reg[x as usize] = 
                             self.v_reg[x as usize]
                                 .wrapping_add(self.v_reg[y as usize]);
+
+                        self.v_reg[0xF] = flag;
                     },
                     // Subtract VY from VX (affects the carry flag)
                     0x5 => {
                         let x = (opcode & 0x0F00) >> 8;
                         let y = (opcode & 0x00F0) >> 4;
 
-                        self.v_reg[0xF] = 1;
-                        if self.v_reg[x as usize] > self.v_reg[y as usize] {
-                            self.v_reg[0xF] = 0;
+                        let mut flag: u8 = 0;
+                        if self.v_reg[x as usize] >= self.v_reg[y as usize] {
+                            flag = 1;
                         }
 
                         self.v_reg[x as usize] = 
                             self.v_reg[x as usize]
                                 .wrapping_sub(self.v_reg[y as usize]);
+
+                        self.v_reg[0xF] = flag;
                     },
                     // Set VX = VY >> 1 (affects the carry flag)
                     0x6 => {
                         let x = (opcode & 0x0F00) >> 8;
                         let y = (opcode & 0x00F0) >> 4;
 
-                        self.v_reg[0xF] = self.v_reg[y as usize] & 0x01;
+                        let flag: u8 = self.v_reg[y as usize] & 0x01; 
                         self.v_reg[x as usize] = self.v_reg[y as usize] >> 1;
+                        self.v_reg[0xF] = flag;
                     },
                     // Subtract VX from VY (affects the carry flag)
                     0x7 => {
                         let x = (opcode & 0x0F00) >> 8;
                         let y = (opcode & 0x00F0) >> 4;
 
-                        self.v_reg[0xF] = 1;
-                        if self.v_reg[y as usize] > self.v_reg[x as usize] {
-                            self.v_reg[0xF] = 0;
+                        let mut flag: u8 = 0;
+                        if self.v_reg[y as usize] >= self.v_reg[x as usize] {
+                            flag = 1;
                         }
 
                         self.v_reg[x as usize] = 
                             self.v_reg[y as usize]
                                 .wrapping_sub(self.v_reg[x as usize]);
+
+                        self.v_reg[0xF] = flag;
                     },
                     // Set VX = VY << 1 (affects the carry flag)
                     0xE => {
                         let x = (opcode & 0x0F00) >> 8;
                         let y = (opcode & 0x00F0) >> 4;
                         
-                        self.v_reg[0xF] = (self.v_reg[y as usize] & 0x80) >> 7;
+                        let flag: u8 = (self.v_reg[y as usize] & 0x80) >> 7;
                         self.v_reg[x as usize] = self.v_reg[y as usize] << 1;
+                        self.v_reg[0xF] = flag;
                     },
 
                     _ => warn!("Operation 0x{:x} is not implemented yet!", opcode),
@@ -315,6 +361,7 @@ impl Cpu {
             }
             // Draw sprite
             0xD000 => { 
+                self.has_drawn = true;
 
                 let screen = screen.unwrap();
                 
@@ -390,24 +437,33 @@ impl Cpu {
                         let x = (opcode & 0x0F00) >> 8;
                         self.sound_timer = self.v_reg[x as usize];
                     },
-                    // Set index = index + VX (affects the carry flag)
+                    // Set index = index + VX 
                     0x1E => {
                         let x = (opcode & 0x0F00) >> 8;
                         trace!("Setting index = index + V{}", x);
-                        
-                        self.v_reg[0xF] = 0;
-                        if self.index + self.v_reg[x as usize] as u16 > 0xFFF {
-                            self.v_reg[0xF] = 1;
-                        }
 
                         self.index = self.index.wrapping_add(self.v_reg[x as usize] as u16);
+                    },
+                    0x29 => {
+                        let x = (opcode & 0x0F00) >> 8;
+                        trace!("Setting index = sprite address of V{}", x);
+                        info!("V{} = {}", x, self.v_reg[x as usize]);
+                        self.index = (self.v_reg[x as usize]*5) as u16;
+                    },
+                    0x33 => {
+                        let x = (opcode & 0x0F00) >> 8;
+                        trace!("Storing BCD representation of V{} in memory", x);
+                        self.ram[self.index as usize] = self.v_reg[x as usize] / 100;
+                        self.ram[(self.index+1) as usize] = (self.v_reg[x as usize] / 10) % 10;
+                        self.ram[(self.index+2) as usize] = self.v_reg[x as usize] % 10;
                     },
                     // Store v_reg[0]..v_reg[x] in memory starting at index
                     0x55 => {
                         let x = (opcode & 0x0F00) >> 8;
                         trace!("Storing v_reg[0]..v_reg[{}] in memory starting at index", x);
                         for i in 0..x+1 {
-                            self.ram[(self.index + i) as usize] = self.v_reg[i as usize];
+                            self.ram[(self.index) as usize] = self.v_reg[i as usize];
+                            self.index += 1;
                         }
                     },
                     // Read v_reg[0]..v_reg[x] from memory starting at index
@@ -415,7 +471,8 @@ impl Cpu {
                         let x = (opcode & 0x0F00) >> 8;
                         trace!("Reading v_reg[0]..v_reg[{}] from memory starting at index", x);
                         for i in 0..x+1 {
-                            self.v_reg[i as usize] = self.ram[(self.index + i) as usize];
+                            self.v_reg[i as usize] = self.ram[(self.index) as usize];
+                            self.index += 1;
                         }
                     },
 
@@ -423,11 +480,21 @@ impl Cpu {
                         let screen = screen.unwrap();
                         let x = (opcode & 0x0F00) >> 8;
 
-                        if !screen.is_key_pressed(self.v_reg[x as usize]) {
-                            self.pc -= 2;
-                        } else {
-                            self.v_reg[x as usize] = screen.get_key_pressed().unwrap();
+                        match self.last_key {
+                            Some(key) => {
+                                if !screen.is_key_pressed(key) {
+                                    self.v_reg[x as usize] = key;
+                                    self.last_key = None;
+                                } else {
+                                    self.pc -= 2;
+                                }
+                            },
+                            None => {
+                                self.pc -= 2;
+                                self.last_key = screen.get_key_pressed();
+                            }
                         }
+
                     }
 
                     _ => warn!("Operation 0x{:x} is not implemented yet!", opcode),
@@ -447,6 +514,8 @@ impl Cpu {
 
         opcode
     }
+
+    
 }
 
 #[cfg(test)]

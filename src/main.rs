@@ -24,11 +24,15 @@ fn main() {
         error!("{:?}", e);
     } else {
         loop {
-            //Execute one CPU cycle
-            cpu.step(Some(&mut screen));
+            let mut draw = false;
+            for _ in 0..20 {
+                cpu.step(Some(&mut screen));
+                draw = draw || cpu.has_drawn();
+            }
+            cpu.update_timers();
 
             //Update the screen
-            screen.update();
+            screen.update(draw);
         }
     }
 }   

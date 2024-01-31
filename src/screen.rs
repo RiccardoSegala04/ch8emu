@@ -4,7 +4,7 @@ use sdl2::keyboard::Keycode;
 use std::time::Duration;
 use log::info;
 
-const PIXEL_SHUTDOWN_FACTOR: u8 = 30;
+const PIXEL_SHUTDOWN_FACTOR: u8 = 70;
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
 const BLOCK_SIZE: u32 = 12;
@@ -18,7 +18,6 @@ pub struct Screen {
     keypad: Vec<bool>,
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
-    
 }
 
 impl Screen  {
@@ -57,38 +56,37 @@ impl Screen  {
     }
 
     // Draws pixel buffer to the screen
-    pub fn update(&mut self) {
+    pub fn update(&mut self, draw: bool) {
 
-        self.canvas.set_draw_color(Color::BLACK);
-        self.canvas.clear();
-
-        // Decrease the shutdown pixels
-        self.shutdown_pixels.iter_mut()
-            .for_each(|x| *x = x.saturating_sub(PIXEL_SHUTDOWN_FACTOR));
-
-        // Draw the shutdown pixels
-
-
-        // Draw the pixels
-        for y in 0..32 {
-            for x in 0..64 {
-                let i = y * 64 + x;
-                let pixel_rect = sdl2::rect::Rect::new(
-                    (x as i32) * BLOCK_SIZE as i32 + BLOCK_SIZE as i32, 
-                    (y as i32) * BLOCK_SIZE as i32 + BLOCK_SIZE as i32, 
-                    BLOCK_SIZE, BLOCK_SIZE
-                );
-                if self.pixels[i] == 1 {
-                    // Draw the pixel
-                    self.canvas.set_draw_color(Color::WHITE);
-                    self.canvas.fill_rect(pixel_rect).unwrap();
-                } else {
-                    // Draw the shutdown pixel
-                    let bright = self.shutdown_pixels[i];
-                    self.canvas.set_draw_color(Color::RGB(bright, bright, bright));
-                    self.canvas.fill_rect(pixel_rect).unwrap();
+        if draw {
+            // Decrease the shutdown pixels
+            self.shutdown_pixels.iter_mut().for_each(|x| *x = 
+                x.saturating_sub(PIXEL_SHUTDOWN_FACTOR));
+            // Draw the pixels
+            self.canvas.set_draw_color(Color::BLACK);
+            self.canvas.clear();
+            for y in 0..32 {
+                for x in 0..64 {
+                    let i = y * 64 + x;
+                    let pixel_rect = sdl2::rect::Rect::new(
+                        (x as i32) * BLOCK_SIZE as i32 + BLOCK_SIZE as i32, 
+                        (y as i32) * BLOCK_SIZE as i32 + BLOCK_SIZE as i32, 
+                        BLOCK_SIZE, BLOCK_SIZE
+                    );
+                    if self.pixels[i] == 1 {
+                        // Draw the pixel
+                        self.canvas.set_draw_color(Color::WHITE);
+                        self.canvas.fill_rect(pixel_rect).unwrap();
+                    } else {
+                        // Draw the shutdown pixel
+                        let bright = self.shutdown_pixels[i];
+                        self.canvas.set_draw_color(Color::RGB(bright, bright, bright));
+                        self.canvas.fill_rect(pixel_rect).unwrap();
+                    }
                 }
             }
+            // Present the canvas
+            self.canvas.present();
         }
         
         // Handle events
@@ -98,9 +96,9 @@ impl Screen  {
                 Event::KeyDown { keycode: Some(keycode), .. } => {
                     info!("Key pressed: {:?}", keycode);
                     match keycode {
-                        Keycode::Num1 => self.keypad[0x0] = true,
-                        Keycode::Num2 => self.keypad[0x1] = true,
-                        Keycode::Num3 => self.keypad[0x2] = true,
+                        Keycode::Num1 => self.keypad[0x1] = true,
+                        Keycode::Num2 => self.keypad[0x2] = true,
+                        Keycode::Num3 => self.keypad[0x3] = true,
                         Keycode::Num4 => self.keypad[0xC] = true,
                         Keycode::Q => self.keypad[0x4] = true,
                         Keycode::W => self.keypad[0x5] = true,
@@ -120,9 +118,9 @@ impl Screen  {
                 Event::KeyUp { keycode: Some(keycode), .. } => {
                     info!("Key released: {:?}", keycode);
                     match keycode {
-                        Keycode::Num1 => self.keypad[0x0] = false,
-                        Keycode::Num2 => self.keypad[0x1] = false,
-                        Keycode::Num3 => self.keypad[0x2] = false,
+                        Keycode::Num1 => self.keypad[0x1] = false,
+                        Keycode::Num2 => self.keypad[0x2] = false,
+                        Keycode::Num3 => self.keypad[0x3] = false,
                         Keycode::Num4 => self.keypad[0xC] = false,
                         Keycode::Q => self.keypad[0x4] = false,
                         Keycode::W => self.keypad[0x5] = false,
@@ -143,10 +141,9 @@ impl Screen  {
             }
         }
 
-        // Present the canvas
-        self.canvas.present();
+        
 
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
     }
 
     // Draws a pixel to the screen
