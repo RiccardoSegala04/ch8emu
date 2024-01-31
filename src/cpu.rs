@@ -677,7 +677,7 @@ mod test {
         cpu.step(None);
 
         assert_eq!(cpu.v_reg[0], 0x02);
-        assert_eq!(cpu.v_reg[0xF], 0x01);
+        assert_eq!(cpu.v_reg[0xF], 0x00);
     }
 
     #[test]
@@ -689,7 +689,7 @@ mod test {
         cpu.step(None);
 
         assert_eq!(cpu.v_reg[0], 0x02);
-        assert_eq!(cpu.v_reg[0xF], 0x01);
+        assert_eq!(cpu.v_reg[0xF], 0x00);
     }
 
     #[test]
