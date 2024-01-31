@@ -4,7 +4,7 @@ use sdl2::keyboard::Keycode;
 use std::time::Duration;
 use log::info;
 
-const PIXEL_SHUTDOWN_FACTOR: u8 = 85;
+const PIXEL_SHUTDOWN_FACTOR: u8 = 80;
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
 const BLOCK_SIZE: u32 = 12;
@@ -140,10 +140,6 @@ impl Screen  {
                 _ => {}
             }
         }
-
-        
-
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
     }
 
     // Draws a pixel to the screen
