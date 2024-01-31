@@ -1,5 +1,5 @@
 # ch8emu
-ch8emu is a simple Chip-8 emulator written in Rust. This emulator allows you to run programs written for the Chip-8 virtual machine, a popular platform for retro gaming enthusiasts and hobbyists.
+ch8emu is a simple Chip-8 interpreter written in Rust. This program allows you to run programs written for the Chip-8 virtual machine, a popular platform for retro gaming enthusiasts and hobbyists.
 <img width="904" alt="Screenshot 2024-01-23 alle 18 49 45" src="https://github.com/RiccardoSegala04/ch8emu/assets/72670063/17e321b0-e5fa-46ff-991c-d9cc71928a59">
 
 ## Getting Started
