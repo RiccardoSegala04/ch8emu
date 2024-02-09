@@ -17,7 +17,11 @@ struct Opts {
 
     // The number of instructions to execute per second
     #[clap(short, long, default_value = "500")]
-    ips: u16
+    ips: u16,
+
+    // Whether to mute the sound
+    #[clap(short, long, default_value = "false")]
+    muted: bool,
 }
 
 fn main() {
@@ -46,6 +50,13 @@ fn main() {
                 draw = draw || cpu.has_drawn();
             }
             cpu.update_timers();
+
+            let sound_timer =  cpu.get_sound_timer();
+            if !args.muted && sound_timer > 0 {
+                screen.resume_beep();
+            } else {
+                screen.pause_beep();
+            }
 
             screen.update(draw);
             

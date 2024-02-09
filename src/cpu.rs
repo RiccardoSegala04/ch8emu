@@ -122,6 +122,11 @@ impl Cpu {
         }
     }
 
+
+    pub fn get_sound_timer(&self) -> u8 {
+        self.sound_timer
+    }
+
     pub fn has_drawn(&self) -> bool {
         self.has_drawn
     }

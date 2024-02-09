@@ -1,6 +1,7 @@
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
 use log::info;
 
 const PIXEL_SHUTDOWN_FACTOR: u8 = 80;
@@ -10,6 +11,23 @@ const BLOCK_SIZE: u32 = 12;
 const WINDOW_WIDTH: u32 = SCREEN_WIDTH * BLOCK_SIZE + BLOCK_SIZE * 2;
 const WINDOW_HEIGHT: u32 = SCREEN_HEIGHT * BLOCK_SIZE + BLOCK_SIZE * 2;
 
+struct SquareWave {
+    phase_inc: f32,
+    phase: f32,
+    volume: f32,
+}
+
+impl AudioCallback for SquareWave {
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [f32]) {
+        for x in out.iter_mut() {
+            *x = if self.phase < 0.5 { self.volume } else { -self.volume };
+            self.phase = (self.phase + self.phase_inc) % 1.0;
+        }
+    }
+}
+
 // Represents the CHIP-8 screen
 pub struct Screen {
     pixels: Vec<u8>,
@@ -17,6 +35,7 @@ pub struct Screen {
     keypad: Vec<bool>,
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
+    device: AudioDevice<SquareWave>,
 }
 
 impl Screen  {
@@ -40,12 +59,31 @@ impl Screen  {
         canvas.clear();
         canvas.present();
 
+        // Create the audio device
+        let audio_subsystem = sdl_context.audio().unwrap();
+        let desired_spec = AudioSpecDesired {
+            freq: Some(44100),
+            channels: Some(1),  // mono
+            samples: None       // default sample size
+        };
+        let device = audio_subsystem.open_playback(None, &desired_spec, |spec| {
+            // Show obtained AudioSpec
+            info!("{:?}", spec);
+            // initialize the audio callback
+            SquareWave {
+                phase_inc: 440.0 / spec.freq as f32,
+                phase: 0.0,
+                volume: 0.25,
+            }
+        }).unwrap();
+
         Screen {
             pixels: vec![0; (SCREEN_WIDTH * SCREEN_HEIGHT) as usize],
             shutdown_pixels: vec![0; (SCREEN_WIDTH * SCREEN_HEIGHT) as usize],
             keypad: vec![false; 16],
             canvas,
             event_pump: sdl_context.event_pump().unwrap(),
+            device,
         }
     }
 
@@ -166,6 +204,14 @@ impl Screen  {
             }
         }
         None
+    }
+
+    pub fn resume_beep(&self) {
+        self.device.resume();
+    }
+
+    pub fn pause_beep(&self) {
+        self.device.pause();
     }
 
 }
