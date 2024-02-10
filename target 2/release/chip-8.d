@@ -1,0 +1,1 @@
+/Users/riccardosegala/Documents/Projects/rust/ch8emu/target/release/chip-8: /Users/riccardosegala/Documents/Projects/rust/ch8emu/src/cpu.rs /Users/riccardosegala/Documents/Projects/rust/ch8emu/src/main.rs /Users/riccardosegala/Documents/Projects/rust/ch8emu/src/screen.rs

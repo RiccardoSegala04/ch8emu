@@ -22,6 +22,30 @@ ch8emu is a simple Chip-8 interpreter written in Rust. This program allows you t
     cargo run roms/your-rom.ch8
     ```
 
+5. Try out some of the ROMs in the `roms` directory. You can find more ROMs online, or you can write your own.
+
+## Dependencies
+This project requires SDL2 to be installed on your system. If you don't have it installed:
+
+- On macOS, you can install it using Homebrew:
+  ```bash
+  brew install sdl2
+  ```
+- On Debian-based Linux distributions, you can install it using apt:
+  ```bash
+  sudo apt-get install libsdl2-dev
+  ```
+- On Red Hat-based Linux distributions, you can install it using yum:
+  ```bash
+  sudo yum install SDL2-devel
+  ```
+- On Arch Linux, you can install it using pacman:
+  ```bash
+  sudo pacman -S sdl2
+  ```
+- On Windows, you can download the development libraries from the [SDL website](https://www.libsdl.org/download-2.0.php).
+
+
 ## Controls
 The Chip-8 keypad is emulated using your computer's keyboard. The default key mapping is as follows:
 
